@@ -1,0 +1,49 @@
+import requests
+
+api_key = "your_api_key_here"  # Your OpenRouter API key
+
+# Start of the conversation history
+conversation = [
+    {
+        "role": "system",
+        "content": (
+            "You are a Dungeon Master narrating a fantasy adventure. All responses should be less than 30 words, "
+            "if possible. You sometimes try to find ways for me to perish, although you also try to move the story forward. "
+            "No responses should involve me having to roll (a die/dice), and the chances are random."
+            "I start at my home village"
+        )
+    }
+]
+
+def ai_dm(prompt):
+    # Add the user's message to the conversation
+    conversation.append({"role": "user", "content": prompt})
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/mongoose/python",  # Your project or profile
+        "X-Title": "AI Dungeon Master"
+    }
+
+    data = {
+        "model": "openai/gpt-3.5-turbo",  # Or "mistralai/mistral-7b-instruct"
+        "messages": conversation
+    }
+
+    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+    result = response.json()
+    reply = result["choices"][0]["message"]["content"]
+
+    # Add the AI's response to the conversation
+    conversation.append({"role": "assistant", "content": reply})
+
+    return reply
+
+# Example usage loop
+while True:
+    user_input = input("You: ")
+    print()
+    reply = ai_dm(user_input)
+    print("DM:", reply)
+    print()
