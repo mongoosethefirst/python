@@ -1,0 +1,207 @@
+import colorama, os, sys, subprocess
+from colorama import Fore, Style
+from time import sleep
+
+print("Welcome to the CYOA tutorial! At any time, type 'back' to go to play the game.")
+
+os.system('clear')
+print("In this tutorial, there are many sections of focus.")
+sleep(1)
+
+def commands():
+	user = input("Whenever you see the '>' in the game, it means that the game is asking for a command.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To submit a command, hit the enter key.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("When you don't know a command to help you with something, type 'help'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this turorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def mobs():
+	user = input("There are three different types of mobs: Passive, Neutral, and Aggressive.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("Passive mobs cannot attack you.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("Both Neutral and Aggressive mobs can, but Aggressive mobs are more common.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To fight a mob, you need either an axe or a sword in your hand (see: Equipping Tutorial).") 
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("If you feel that you are not able to fight a mob, you can choose to run from it.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("However, this takes some of your energy (see: Stats Tutorial).")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def mining():
+	user = input("You can mine in the Forest, Mines, and Plains.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To mine, you need a corresponding tool in your hand.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("When mining, you may encounter a mob at any time (see: Mobs Tutorial).")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("The only difference between tools is durability, using a RNG style durability.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def village():
+	user = input("The village is a sacred place")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("You cannot go mining in the village.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("However, the villagers have many items to trade.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def crafting():
+	user = input("To craft an item, type 'craft'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To see an item's recipe, type 'recipe'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("Crafting planks give you two planks per log.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("Crafting sticks gives you three sticks per plank.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("You can bulk-craft in the confirmation command by typing 'y2', 'y3', etc.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("If you have less items in your inventory than you tried to bulk-craft, it will craft all of the items in your inventory.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To see a list of items, type 'list'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To see your inventory, type 'inv'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def stats():
+	user = input("There are a few stats that you can see:")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">inv")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">armour")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">inhand")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">health")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">hunger")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input(">energy")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def equipping():
+	user = input("To equip an armour piece, type 'equip'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To change what's in your hand, type 'hand'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To empty your hand, type '' when it asks what to put in your hand.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+def info():
+	user = input("To save info, type 'save'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("To load info, type 'load'.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("You cannot load info if you have a save in your current game.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("However, you can save as much as you want.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+	user = input("That concludes this tutorial.")
+	if user.lower().strip() == "back":
+		subprocess.run(["python3", "CYOA.py"])
+
+while True:
+	print("1 > ", Fore.RED, "Commands", Style.RESET_ALL)
+	print("2 > ", Fore.YELLOW, "Mobs", Style.RESET_ALL)
+	print("3 > ", Fore.RED, "Mining", Style.RESET_ALL)
+	print("4 > ", Fore.YELLOW, "Village", Style.RESET_ALL)
+	print("5 > ", Fore.RED, "Crafting", Style.RESET_ALL)
+	print("6 > ", Fore.YELLOW, "Stats", Style.RESET_ALL)
+	print("7 > ", Fore.RED, "Equipping", Style.RESET_ALL)
+	print("8 > ", Fore.YELLOW, "Saving / Loading Info", Style.RESET_ALL)
+	print("9 > ", Fore.RED, "Full Tutorial", Style.RESET_ALL)
+	command = input("Enter corresponding section number, or 'back': ").lower().strip()
+	if command == "1":
+		commands()
+	elif command == "2":
+		mobs()
+	elif command == "3":
+		mining()
+	elif command == "4":
+		village()
+	elif command == "5":
+		crafting()
+	elif command == "6":
+		stats()
+	elif command == "7":
+		equipping()
+	elif command == "8":
+		info()
+	elif command == "9":
+		commands()
+		mobs()
+		mining()
+		village()
+		crafting()
+		stats()
+		equipping()
+		info()
+	elif command == "back":
+		os.system('clear')
+		subprocess.run(["python3", "CYOA.py"])
+	else:
+		print("That is not a computable command.")
+		sleep(0.5)
+
