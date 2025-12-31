@@ -1,0 +1,776 @@
+import requests, time, random
+import base64
+from io import BytesIO
+from PIL import Image
+import turtle, socket, threading, math
+from time import sleep
+
+global p1_name
+global p2_name
+global track
+
+traction = 0.96
+turn_speed_loss = 0.988
+show_checkpoints = 1  # 1 is on, very glitchy
+multiplayer = 1
+p1_name = "P1"
+p2_name = "P2"
+
+def j_server():
+    global target_x2, target_y2, target_d2, best_lap_p2, p2_name
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while True:
+        try:
+            port = int(input("Enter Connection Port: "))
+            host = input("Enter Server IP: ")
+            client.connect((host, port))
+            break
+        except Exception as e:
+            print("\nConnection failed. Please try again. Error:", e, "\n")
+            sleep(1)
+
+    print(f"Connected To Server: {port}")
+
+    while True:
+        try:
+            # send our state
+            client.send(str(l()).encode())
+            data = client.recv(1024).decode()
+            if not data:
+                print("Server Disconnected.")
+                break
+
+            # Expecting a list like [x, y, d, best_lap, p1_name]
+            try:
+                packet = eval(data)
+                # defensive unpack
+                if isinstance(packet, (list, tuple)) and len(packet) >= 5:
+                    x, y, d, best_lap, sender_name = packet[:5]
+                    target_x2 = float(x)
+                    target_y2 = float(y)
+                    target_d2 = float(d)
+                    try:
+                        best_lap_p2 = float(best_lap)
+                    except:
+                        best_lap_p2 = best_lap
+                    p2_name = str(sender_name)
+                else:
+                    # older/invalid packet: ignore
+                    pass
+            except Exception as e:
+                # malformed packet
+                pass
+
+            sleep(0.01)
+        except Exception as e:
+            print("Connection Error:", e)
+            sleep(1)
+            print("Retrying...\n")
+            sleep(1)
+
+def s_server():
+    global target_x2, target_y2, target_d2, best_lap_p2, p2_name
+    while True:
+        try:
+            port = int(input("Choose Port 1024 - 65535: "))
+            if not (1024 <= port <= 65535):
+                print("\nPlease Choose A Port 1024 - 65535.\n")
+                continue
+
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server.bind(("0.0.0.0", port))
+            ip = g_ip()
+            print(f"Server Started On Port: {port} With IP: {ip}")
+            server.listen(1)
+
+            conn, addr = server.accept()
+            print(f"Client Connected: {addr}")
+
+            # connection loop
+            while True:
+                try:
+                    data = conn.recv(1024).decode()
+                    if not data:
+                        print("Client Disconnected.")
+                        break
+
+                    # parse incoming packet
+                    try:
+                        packet = eval(data)
+                        if isinstance(packet, (list, tuple)) and len(packet) >= 5:
+                            x, y, d, best_lap, client_name = packet[:5]
+                            # update the remote player's state
+                            target_x2 = float(x)
+                            target_y2 = float(y)
+                            target_d2 = float(d)
+                            try:
+                                best_lap_p2 = float(best_lap)
+                            except:
+                                best_lap_p2 = best_lap
+                            p2_name = str(client_name)
+                        else:
+                            pass
+                    except Exception:
+                        pass
+
+                    # send our state back
+                    try:
+                        conn.send(str(l()).encode())
+                    except Exception:
+                        # if send fails, close connection
+                        break
+
+                    sleep(0.03)
+                except Exception as e:
+                    print("Connection loop error:", e)
+                    break
+
+            try:
+                conn.close()
+            except:
+                pass
+            try:
+                server.close()
+            except:
+                pass
+
+        except Exception as e:
+            print("\nServer error or port unavailable. Error:", e, "\n")
+
+# Get player nickname
+p1_name = input("Enter Nickname: ")
+
+# Ask if checkpoints should be shown
+show_checkpoints = 1 if input("Do you want checkpoints shown? Y/N: ").strip().lower() == "y" else 0
+
+# Choose singleplayer or multiplayer
+print("1: Singleplayer | 2: Multiplayer")
+while True:
+    mode = input("Enter Number: ").strip()
+    if mode in ("1", "2"):
+        break
+    print("Please choose 1 or 2.")
+
+multiplayer = mode == "2"
+
+# Choose track if not multiplayer
+if not multiplayer:
+    print("Choose Track:")
+    print("1: Track 1")
+    print("2: Track 2")
+    print("3: Random Track")
+    while True:
+        try:
+            track_choice = int(input("Enter number 1-3: "))
+            if 1 <= track_choice <= 3:
+                break
+        except ValueError:
+            pass
+        print("Please choose a number between 1 and 3.")
+
+    if track_choice == 3:
+        track_choice = random.randint(1, 2)
+else:
+    # Multiplayer always uses track 1
+    track_choice = 1
+
+track = track_choice
+
+# Setup track parameters
+if track == 1:
+    track_url = "https://i.postimg.cc/W3hr23T1/pixil-frame-0-1.png"
+    x1, y1, d1 = 0, 0, 0
+    line_start, line_end = (100, -50), (100, 50)
+    checkpoints = [
+        ((400, 210), (445, 105)),
+        ((900, 100), (950, 200)),
+        ((1091, 18), (1155, 117)),
+        ((1291, -197), (1182, -132)),
+        ((980, -260), (948, -359)),
+        ((742, -358), (876, -376)),
+        ((691, -523), (682, -418)),
+        ((-204, -436), (-213, -538)),
+        ((-476, -464), (-381, -380)),
+        ((-620, -312), (-618, -421)),
+        ((-1198, -350), (-1139, -262)),
+        ((-1140, -197), (-1248, -136)),
+        ((-1297, -54), (-1215, 36)),
+        ((-1216, 281), (-1327, 344)),
+        ((-1041, 609), (-979, 491)),
+        ((-586, 437), (-527, 539)),
+        ((-400, 354), (-529, 374)),
+        ((-478, 186), (-361, 243)),
+        ((-74, 64), (-107, -50))
+    ]
+elif track == 2:
+    track_url = "https://i.postimg.cc/Hnpymxn2/Screenshot-2025-11-17-095906-(1)-(1).png"
+    x1, y1, d1 = 0, 100, 320
+    line_start, line_end = (45, -5), (95, 60)
+    checkpoints = [
+        ((472, -386), (526, -317)),
+        ((667, -569), (583, -578)),
+        ((518, -874), (594, -917)),
+        ((420, -1014), (434, -921)),
+        ((-120, -757), (-152, -843)),
+        ((-1014, -583), (-964, -494)),
+        ((-1137, -353), (-1226, -368)),
+        ((-1269, -143), (-1171, -136)),
+        ((-1095, 96), (-1170, 145)),
+        ((-1211, 257), (-1132, 311)),
+        ((-1180, 365), (-1269, 327)),
+        ((-1156, 548), (-1097, 455)),
+        ((-500, 657), (-535, 749)),
+        ((134, 956), (175, 855)),
+        ((375, 865), (418, 958)),
+        ((921, 712), (870, 629)),
+        ((986, 521), (1073, 555)),
+        ((1249, 1), (1152, -36)),
+        ((1126, -222), (1208, -266)),
+        ((1104, -454), (1028, -391)),
+        ((919, -397), (861, -479)),
+        ((463, -134), (529, -88)),
+        ((537, 180), (470, 235)),
+        ((700, 490), (774, 435)),
+        ((640, 615), (673, 522)),
+        ((361, 294), (303, 360)),
+        ((204, 372), (133, 342)),
+        ((137, 498), (212, 461)),
+        ((282, 637), (196, 619)),
+        ((158, 654), (148, 745)),
+        ((-108, 653), (-67, 579)),
+        ((-148, 404), (-232, 395)),
+        ((-99, 125), (-31, 185))
+    ]
+
+# Multiplayer server options
+if multiplayer:
+    print(f"Track {track} selected for multiplayer")
+    print("1: Start Server | 2: Join Server")
+    while True:
+        user = input("Enter Number: ").strip()
+        if user in ("1", "2"):
+            break
+        print("Please choose 1 or 2.")
+
+    if user == "1":
+        threading.Thread(target=s_server, daemon=True).start()
+    else:
+        threading.Thread(target=j_server, daemon=True).start()
+
+def print_pos():
+    print("Player position:", x1, y1)
+
+def check_line_collision(px, py, start, end, threshold=10):
+    x0, y0 = px, py
+    x1_, y1_ = start
+    x2_, y2_ = end
+    dx = x2_ - x1_
+    dy = y2_ - y1_
+    if dx == dy == 0:
+        return math.hypot(x0 - x1_, y0 - y1_) < threshold
+    t = max(0, min(1, ((x0 - x1_) * dx + (y0 - y1_) * dy) / (dx * dx + dy * dy)))
+    nearest_x = x1_ + t * dx
+    nearest_y = y1_ + t * dy
+    dist = math.hypot(x0 - nearest_x, y0 - nearest_y)
+    return dist < threshold
+
+
+def load_track_from_url(url, track_number):
+    global track_image
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print("Failed to fetch image")
+        return None
+
+    image_bytes = response.content
+
+    track_image = Image.open(BytesIO(image_bytes))
+    track_image = track_image.convert("RGB")
+    track_image = track_image.resize((2800, 2100))
+
+    # unique filename so turtle won't cache it
+    filename = f"track_{track_number}_{time.time_ns()}.gif"
+    track_image.save(filename)
+
+    track_turtle_local = turtle.Turtle()
+    track_turtle_local.hideturtle()
+    track_turtle_local.penup()
+
+    screen.register_shape(filename)
+    track_turtle_local.shape(filename)
+    track_turtle_local.goto(0, 0)
+    track_turtle_local.stamp()
+
+    return track_turtle_local
+
+
+def get_track_color(x, y):
+    img_x = int((x + 1400))
+    img_y = int((1050 - y))
+    if 0 <= img_x < track_image.width and 0 <= img_y < track_image.height:
+        return track_image.getpixel((img_x, img_y))
+    return (0, 76, 25)
+
+
+# ----------------------------
+# CREATE SINGLE SCREEN & LOAD TRACK
+# ----------------------------
+
+screen = turtle.Screen()
+# Use the original size you later used for HUD calculations
+screen.setup(800, 600)
+# You previously used fractional RGB here; turtle accepts 0-1 floats for bg:
+turtle.bgcolor((0, 0.3, 0.1))
+# Use tracer(0) so we control updates via screen.update()
+screen.tracer(0)
+
+# Load chosen track once, store the returned turtle in track_turtle
+track_turtle = load_track_from_url(track_url, track)
+
+best_lap_p1 = "NA"; last_lap_p1 = "NA"
+x2 = 0; y2 = 0; d2 = 0; best_lap_p2 = "NA"; last_lap_p2 = "NA"
+speed = 0; m = 0
+
+target_x2 = x2
+target_y2 = y2
+target_d2 = d2
+
+point = turtle.Turtle()
+point.hideturtle()
+point.pensize(8)
+
+g = turtle.Turtle()
+g.hideturtle()
+
+keys = {}
+gears = ["R", "N", "1", "2", "3", "4", "5", "6", "7", "8"]
+gear = 2
+
+player1 = turtle.Turtle()
+player1.turtlesize(stretch_wid=1.2, stretch_len=1.4)
+player1.hideturtle()
+player1.color("blue")
+player1.penup()
+
+player2 = turtle.Turtle()
+player2.hideturtle()
+player2.turtlesize(stretch_wid=1.2, stretch_len=1.4)
+player2.color("red")
+player2.penup()
+
+last_lap_p1 = "NA"
+best_lap_p1 = "NA"
+lap_start_time = None
+
+line_crossed = False
+lap_counter = 0
+checkpoint_index = 0
+
+checkpoint_index = 0
+checkpoint_crossed = False
+
+
+def draw():
+    global x2, y2, d2
+    global last_lap_p1, best_lap_p1, lap_start_time
+    global lap_counter, line_crossed, show_checkpoints
+
+    # Clear previous stamps
+    player1.clear()
+    if multiplayer == 1:
+        player2.clear()
+    track_turtle.clear()
+
+    # Draw track relative to player 1
+    track_turtle.goto(-x1, -y1)
+    track_turtle.stamp()
+
+    # Draw player 1
+    player1.goto(0, 0)
+    player1.setheading(d1)
+    player1.stamp()
+
+    if multiplayer == 1:
+        # Interpolate player 2 position for smooth movement
+        interp_speed = 0.2
+        x2 += (target_x2 - x2) * interp_speed
+        y2 += (target_y2 - y2) * interp_speed
+        diff_angle = (target_d2 - d2 + 180) % 360 - 180
+        d2 += diff_angle * interp_speed
+
+        # Draw player 2
+        player2.goto(x2 - x1, y2 - y1)
+        player2.setheading(d2)
+        player2.stamp()
+
+    # Draw finish line
+    point.clear()
+    point.color("yellow")
+    point.pensize(5)
+    point.penup()
+    point.goto(line_start[0]-x1, line_start[1]-y1)
+    point.pendown()
+    point.goto(line_end[0]-x1, line_end[1]-y1)
+    point.penup()
+
+    # Draw checkpoints if enabled
+    if show_checkpoints == 1:
+        point.pensize(5)
+        for (start, end) in checkpoints:
+            point.color("red")
+            point.penup()
+            point.goto(start[0] - x1, start[1] - y1)
+            point.pendown()
+            point.goto(end[0] - x1, end[1] - y1)
+            point.penup()
+
+    # --- HUD calculations ---
+    dx = x2 - x1
+    dy = y2 - y1
+    angle_radians = math.atan2(dy, dx)
+    angle_degrees = math.degrees(angle_radians)
+
+    sw = screen.window_width()
+    sh = screen.window_height()
+    scale_w = sw / 800
+    scale_h = sh / 600
+    scale = min(scale_w, scale_h)
+    hud_x = -sw//2 + 20 * scale
+    hud_y = -sh//2 + 20 * scale
+
+    hud_width = 265 * scale
+    hud_height = 110 * scale
+
+    # --- Left HUD (original) ---
+    point.goto(hud_x, hud_y)
+    point.color("white")
+    point.fillcolor("white")
+    point.setheading(0)
+    point.pendown()
+    point.begin_fill()
+    point.forward(hud_width)
+    point.left(90)
+    point.forward(hud_height)
+    point.left(90)
+    point.forward(hud_width)
+    point.left(90)
+    point.forward(hud_height)
+    point.end_fill()
+    point.penup()
+
+    arrow_x = hud_x + 210 * scale
+    arrow_y = hud_y + 60 * scale
+
+    # Draw directional arrow
+    point.goto(arrow_x, arrow_y)
+    point.pensize(7)
+    point.setheading(angle_degrees)
+    point.color("grey")
+    point.pendown()
+    point.forward(40 * scale)
+    point.penup()
+
+    if multiplayer == 1:
+        # Player 2 marker on arrow
+        point.color(player2.pencolor())
+        point.pendown()
+        point.forward(5 * scale)
+        point.penup()
+
+    # Player 1 marker (center)
+    point.goto(arrow_x, arrow_y)
+    point.color(player1.pencolor())
+    point.pendown()
+    point.forward(0)
+    point.penup()
+
+    # --- Main HUD text ---
+    g.clear()
+    g.goto(hud_x + 10 * scale, hud_y + 10 * scale)
+    font_size = int(13 * scale)
+    g.write(
+        f"Laps: {lap_counter-1 if lap_counter>0 else 0}\n"
+        f"Last Lap: {last_lap_p1}\n"
+        f"Best Lap: {best_lap_p1}\n\n"
+        f"Gear: {gears[gear]}     Speed: {round(speed*17)}",
+        font=("Arial", font_size, "bold")
+    )
+    g.penup()
+
+    if multiplayer == 1:
+        # --- Top-Right HUD for best laps ---
+        top_right_x = sw//2 - hud_width + 10 * scale
+        top_right_y = sh//2 - 120 * scale
+
+        # Draw box
+        point.goto(top_right_x, top_right_y)
+        point.setheading(0)
+        point.color("white")
+        point.fillcolor("white")
+        point.pendown()
+        point.begin_fill()
+        point.forward(hud_width/1.13)
+        point.left(90)
+        point.forward(hud_height)
+        point.left(90)
+        point.forward(hud_width/1.13)
+        point.left(90)
+        point.forward(hud_height)
+        point.end_fill()
+        point.penup()
+
+        # Write best lap times (fastest > slowest)
+        best_times = []
+        if len(p1_name) > 10:
+            d_p1_name = p1_name[:7] + "..."
+        else:
+            d_p1_name = p1_name
+        if len(p2_name) > 10:
+            d_p2_name = p2_name[:7] + "..."
+        else:
+            d_p2_name = p2_name
+        best_times.append((d_p1_name, best_lap_p1))
+        best_times.append((d_p2_name, best_lap_p2))
+        best_times.sort(key=lambda x: x[1] if isinstance(x[1], (int, float)) else float('inf'))
+
+        g.goto(top_right_x + 10 * scale, top_right_y - hud_height + 150 * scale)
+        best_text = "Best Laps:\n" + "\n".join([f"{p}: {t}" for p, t in best_times])
+        g.write(best_text, font=("Arial", font_size, "bold"))
+
+    # Schedule next draw
+    screen.update()
+    screen.ontimer(draw, 20)
+
+# kick off draw loop
+draw()
+
+def n_lap():
+    global lap_start_time, last_lap_p1, best_lap_p1
+    global line_crossed, lap_counter, checkpoint_index, checkpoint_crossed
+
+    if lap_start_time is None:
+        lap_start_time = time.time()
+
+    # Check if player is touching the finish line
+    touching_finish = check_line_collision(x1, y1, line_start, line_end)
+
+    # Check if player is touching the next checkpoint
+    if checkpoint_index < len(checkpoints):
+        cp_start, cp_end = checkpoints[checkpoint_index]
+        touching_cp = check_line_collision(x1, y1, cp_start, cp_end)
+    else:
+        touching_cp = False
+
+    # Handle checkpoint crossing
+    if touching_cp and not checkpoint_crossed:
+        checkpoint_index += 1
+        checkpoint_crossed = True
+    elif not touching_cp and checkpoint_crossed:
+        checkpoint_crossed = False
+
+    # Handle finish line crossing
+    if touching_finish and not line_crossed:
+        line_crossed = True
+
+        # Only count lap if all checkpoints were hit
+        if checkpoint_index == len(checkpoints):
+            lap_counter += 1
+
+            # Update last and best lap times
+            now = time.time()
+            lap_time = now - lap_start_time
+            last_lap_p1 = round(lap_time, 2)
+            if best_lap_p1 == "NA" or lap_time < best_lap_p1:
+                best_lap_p1 = round(lap_time, 2)
+
+        # Reset lap timer for next lap
+        lap_start_time = time.time()
+
+        # Reset checkpoints
+        checkpoint_index = 0
+        checkpoint_crossed = False
+
+    if not touching_finish:
+        line_crossed = False
+
+def key_down(key):
+    keys[key] = True
+
+def key_up(key):
+    keys[key] = False
+
+screen.listen()
+screen.onkeypress(lambda: key_down("w"), "w")
+screen.onkeyrelease(lambda: key_up("w"), "w")
+screen.onkeypress(lambda: key_down("s"), "s")
+screen.onkeyrelease(lambda: key_up("s"), "s")
+screen.onkeypress(lambda: key_down("d"), "a")
+screen.onkeyrelease(lambda: key_up("d"), "a")
+screen.onkeypress(lambda: key_down("a"), "d")
+screen.onkeyrelease(lambda: key_up("a"), "d")
+screen.onkeypress(lambda: key_down("q"), "q")
+screen.onkeyrelease(lambda: key_up("q"), "q")
+screen.onkeypress(lambda: key_down("e"), "e")
+screen.onkeyrelease(lambda: key_up("e"), "e")
+
+screen.onkeypress(lambda: key_down("w"), "W")
+screen.onkeyrelease(lambda: key_up("w"), "W")
+screen.onkeypress(lambda: key_down("s"), "S")
+screen.onkeyrelease(lambda: key_up("s"), "S")
+screen.onkeypress(lambda: key_down("d"), "A")
+screen.onkeyrelease(lambda: key_up("d"), "A")
+screen.onkeypress(lambda: key_down("a"), "D")
+screen.onkeyrelease(lambda: key_up("a"), "D")
+screen.onkeypress(lambda: key_down("q"), "Q")
+screen.onkeyrelease(lambda: key_up("q"), "Q")
+screen.onkeypress(lambda: key_down("e"), "E")
+screen.onkeyrelease(lambda: key_up("e"), "E")
+
+screen.onkeypress(lambda: key_down("w"), "Up")
+screen.onkeyrelease(lambda: key_up("w"), "Up")
+screen.onkeypress(lambda: key_down("s"), "Down")
+screen.onkeyrelease(lambda: key_up("s"), "Down")
+screen.onkeypress(lambda: key_down("a"), "Right")
+screen.onkeyrelease(lambda: key_up("a"), "Right")
+screen.onkeypress(lambda: key_down("d"), "Left")
+screen.onkeyrelease(lambda: key_up("d"), "Left")
+screen.onkeypress(lambda: key_down("q"), "comma")
+screen.onkeyrelease(lambda: key_up("q"), "comma")
+screen.onkeypress(lambda: key_down("e"), "period")
+screen.onkeyrelease(lambda: key_up("e"), "period")
+
+def handle_keys():
+    global x1, y1, d1, speed, gear, gears, m, traction, turn_speed_loss
+    turtle.onkey(print_pos, "p")
+    if keys.get("q", False) and not keys.get("q_pressed", False):
+        keys["q_pressed"] = True
+        if gear > 0:
+            target_gear = gear - 1
+            target_label = gears[target_gear]
+            if target_label == "R" and speed > 0.2:
+                pass
+            else:
+                gear = target_gear
+    elif not keys.get("q", False):
+        keys["q_pressed"] = False
+
+    if keys.get("e", False) and not keys.get("e_pressed", False):
+        keys["e_pressed"] = True
+        if gear < len(gears) - 1:
+            target_gear = gear + 1
+            target_label = gears[target_gear]
+            if target_label == "1" and speed < -0.2:
+                pass
+            else:
+                if gear == 0:
+                    if speed < 0.2:
+                        gear = target_gear
+                else:
+                    gear = target_gear
+    elif not keys.get("e", False):
+        keys["e_pressed"] = False
+
+    if keys.get("w", False) and not gear == 1:
+        if speed < 15:
+            if gear == 1: #N
+                m = 0
+                mx = 0
+            elif gear == 2: #1
+                m = 0.05
+                mx = 3
+            elif gear == 3 or gear == 0: #2 or R
+                m = 0.045
+                mx = 4
+            elif gear == 4: # 3
+                m = 0.035
+                mx = 6
+            elif gear == 5: #4
+                m = 0.03
+                mx = 8
+            elif gear == 6: #5
+                m = 0.009
+                mx = 10
+            elif gear == 7: #6
+                m = 0.008
+                mx = 12
+            elif gear == 8: #7
+                m = 0.007
+                mx = 15
+            elif gear == 9:
+                m = 0.003
+                mx = 20
+            speed += (mx - speed) * m
+    elif keys.get("s", False):
+        slowdown_factor = 1 - (0.1 * traction) * (1 - max(abs(speed)/15, 0.2))
+        speed *= slowdown_factor
+        if gear == 0:
+            if speed < 0:
+                speed = 0
+            if speed < -2:
+                speed = -2
+        else:
+            if speed < 0:
+                speed = 0
+    else:
+        speed *= 0.99
+
+    radians = math.radians(d1)
+    direction = -1 if gears[gear] == "R" else 1
+    x1 += direction * speed * math.cos(radians) * 1.5
+    y1 += direction * speed * math.sin(radians) * 1.5
+
+    moving_backward = (gears[gear] == "R") or (speed < 0)
+    steer_mult = 0 if speed == 0 else 1
+    turn_dir = -1 if moving_backward else 1
+
+    if keys.get("a", False):
+        d1 -= 5 * turn_dir * steer_mult * traction
+        speed *= turn_speed_loss - (min(speed / 50, 0.7) * 0.06) * traction
+
+    if keys.get("d", False):
+        d1 += 5 * turn_dir * steer_mult * traction
+        speed *= turn_speed_loss - (min(speed / 50, 0.7) * 0.06) * traction
+
+    screen.ontimer(handle_keys, 20)
+    
+    color_under = get_track_color(x1, y1)
+    brightness = sum(color_under) / 3
+    if brightness > 30:
+        traction = 0.5
+        if speed > 5:
+            speed = speed * 0.978
+    else:
+        traction = 0.96
+
+    n_lap()
+
+handle_keys()
+
+def update_game(data):
+    global target_x2, target_y2, target_d2, best_lap_p2
+    try:
+        x, y, d, best_lap = eval(data)
+        target_x2 = x
+        target_y2 = y
+        target_d2 = d
+        best_lap_p2 = best_lap
+    except:
+        pass
+
+def l():
+    return [x1, y1, d1, best_lap_p1, p1_name]
+
+def g_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
+
+screen.mainloop()
