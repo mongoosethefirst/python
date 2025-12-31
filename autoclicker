@@ -1,0 +1,7 @@
+import pressing, time
+from pressing import *
+while True:
+    if pressed("ctrl") and pressed("q"):
+        mouse_click()
+        time.sleep(0.001) #time between clicks
+#ctrl + q to run
